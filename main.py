@@ -96,7 +96,8 @@ def del_number(*args):
 
 @input_error
 def print_phone(*args):
-    return notebook[args[0]]
+    name = Name(args[0])
+    return notebook[name.value]
 
 
 def show_all(*args):
