@@ -1,23 +1,21 @@
 from collections import UserDict
-from typing import List
+from typing import List, Tuple
 
 
 class Field:
     def __init__(self, value) -> None:
-        self.value = value.title()
+        self.value = value
 
     def __str__(self) -> str:
         return f'{self.value}'
 
 
 class Name(Field):
-    def __init__(self, *args):
-        super().__init__(*args)
+    pass
 
 
 class Phone(Field):
-    def __init__(self, *args):
-        super().__init__(*args)
+    pass
 
 
 class Record:
@@ -25,23 +23,37 @@ class Record:
         self.name = name
         self.phones = phones
 
-    def add_phone(self, phone) -> None:
-        self.phones.append(phone)
+    def add_phone(self, phone: Phone) -> Phone | None:
+        if phone.value not in [p.value for p in self.phones]:
+            self.phones.append(phone)
+            return phone
 
-    def change_phone(self, phone, new_phone) -> None:
-        self.phones.remove(phone)
-        self.phones.append(new_phone)
+    def del_phone(self, phone: Phone) -> Phone | None:
+        for p in self.phones:
+            if p.value == phone.value:
+                self.phones.remove(p)
+                return p
 
-    def del_phone(self, phone) -> None:
-        self.phones.remove(phone)
+    def change_phone(self, phone, new_phone) -> tuple[Phone, Phone] | None:
+        if self.del_phone(phone):
+            self.add_phone(new_phone)
+            return phone, new_phone
 
     def __str__(self) -> str:
-        return f'Contact {self.name}: Phones {self.phones}'
+        return f'Phones {", ".join([p.value for p in self.phones])}'
 
 
 class AddressBook(UserDict):
-    def add_record(self, record: Record) -> None:
-        self.data[record.name.value] = record
+    def add_record(self, record: Record) -> Record | None:
+        if not self.data.get(record.name.value):
+            self.data[record.name.value] = record
+            return record
+
+    def del_record(self, key: str) -> Record | None:
+        rec = self.data.get(key)
+        if rec:
+            self.data.pop(key)
+            return rec
 
 
 def input_error(func):
@@ -71,33 +83,42 @@ notebook = AddressBook()
 
 @input_error
 def add_contact(*args):
-    name, phone = Name(args[0]), Phone(args[1])
-    if name.value in notebook:
-        notebook[name.value].add_phone(phone.value)
-        return f"Contact {name.value} has added successfully."
+    rec = Record(Name(args[0]), [Phone(args[1])])
+    if notebook.add_record(rec):
+        return f"Contact {rec.name.value} has added successfully."
     else:
-        notebook[name.value] = Record(name, [phone.value])
-        return f"Contact {name.value} has added successfully."
+        return f'{rec.name.value} contact is in the notebook already.'
 
 
 @input_error
 def change_number(*args):
-    name, phone, new_phone = Name(args[0]), Phone(args[1]), Phone(args[2])
-    notebook[name.value].change_phone(phone.value, new_phone.value)
-    return f"Contact {name.value} has changed successfully."
+    rec = notebook.get(args[0])
+    if rec:
+        rec.change_phone(Phone(args[1]), Phone(args[2]))
+        return f'Contact {rec.name.value} has changed successfully.'
+    return f'Contact, with name {args[0]} not in notebook.'
 
 
 @input_error
 def del_number(*args):
-    name, phone = Name(args[0]), Phone(args[1])
-    notebook[name.value].del_phone(phone.value)
-    return f"Contact {name.value} has deleted successfully."
+    rec = notebook.get(args[0])
+    if rec:
+        rec.del_phone(Phone(args[1]))
+        return f'Contact {args[1]} has deleted successfully from contact {rec.name.value}.'
+    return f'Contact, with name {args[0]} not in notebook.'
 
 
 @input_error
 def print_phone(*args):
-    name = Name(args[0])
-    return notebook[name.value]
+    return notebook[args[0]]
+
+
+@input_error
+def del_contact(*args):
+    rec = notebook.del_record(args[0])
+    if rec:
+        return f'Contact {rec.name.value} has deleted successfully.'
+    return f'Contact, with name {args[0]} not in notebook.'
 
 
 def show_all(*args):
@@ -111,7 +132,8 @@ all_commands = {
     print_phone: ["phone", "number"],
     show_all: ["show all", "show"],
     to_exit: ["good bye", "close", "exit", ".", "bye"],
-    del_number: ["del", "delete", "-"]
+    del_number: ["del", "delete", "-"],
+    del_contact: ["remove", ],
 }
 
 
